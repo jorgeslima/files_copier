@@ -10,7 +10,7 @@ def main():
     """Main"""
     print("Initializing...")
     print("Parsing configuration file...")
-    configuration_manager = ConfigHandler(os.path.dirname(__file__))
+    configuration_manager = ConfigHandler(os.path.abspath(os.path.dirname(__file__)))
     parsed_conf = configuration_manager.read()
     print("Beginning source scan...")
     files_parser = FilesParser(parsed_conf['SOURCE'])
