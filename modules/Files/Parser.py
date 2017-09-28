@@ -24,8 +24,9 @@ class FilesParser(object):
             self.parse_local_host_files(source.get('path'))
             return True
         elif source.get('type') == 'ftp':
-            self.parse_remote_files()
+            self.parse_remote_ftp_files()
             return True
+
 
     def parse_local_host_files(self, path):
         """Handle the scan of localhost files"""
@@ -48,24 +49,17 @@ class FilesParser(object):
             else:
                 self.print_path_not_found_error()
 
-    def parse_remote_files(self, root=None):
+    def parse_remote_ftp_files(self, root=None):
         """Handle the scan of remote files"""
         self.validate_remote_config()
         if not root:
             root = self.source.get('path')
         with FTPHost(self.source.get('address'), self.source.get('user'), self.source.get('password')) as client:
-            if client.path.isdir(root):
-                if self.dir_id is None:
-                    self.dir_id = self.database.insert('dirs', {'path':root, 'status':False})
-                for name in client.listdir(root):
-                    file = "%s/%s" % (root, name)
-                    if client.path.isdir(file):
-                        self.dir_id = self.database.insert('dirs', {'path':file, 'status':False})
-                        self.parse_remote_files(file)
-                    else:
-                        self.database.insert('files', {'dir_id':self.dir_id, 'path':file, 'status':False})
-            else:
-                self.print_path_not_found_error()
+                for root_dir,dirs,files in client.walk(root):
+                    self.dir_id = self.database.insert('dirs', {'path':root_dir, 'status':False})
+                    for f in files:
+                        nfile = "%s/%s" % (root_dir, f)
+                        self.database.insert('files', {'dir_id':self.dir_id, 'path':nfile, 'status':False})
 
     def print_path_not_found_error(self):
         """Print the path not found error and stops the program execution"""
