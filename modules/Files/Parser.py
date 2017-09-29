@@ -1,8 +1,11 @@
 #!/usr/bin/pyton3.5
 """Handles the parse of the files. Scans a dir and generate the database of files to be copied"""
 
+import time
 from pathlib import Path
 from ftputil import FTPHost
+from paramiko import Transport,SFTPClient
+from stat import S_ISDIR
 from modules.DbHandler.DbHandler import DbHandler
 
 class FilesParser(object):
@@ -11,7 +14,8 @@ class FilesParser(object):
         self.database = DbHandler()
         self.dir_id = None
         self.source = source
-        self.ftphost = None
+        self.sftp = None
+        self.transport = None
         source_type = source.get('type')
         if not source_type:
             print("Type of copy is not defined in the config source section. Please fix this problem and try again")
@@ -25,6 +29,11 @@ class FilesParser(object):
             return True
         elif source.get('type') == 'ftp':
             self.parse_remote_ftp_files()
+            return True
+        elif source.get('type') == 'sftp':
+            self.init_sftp_connection()
+            self.parse_remote_sftp_files()
+            self.close_sftp_connection()
             return True
 
 
@@ -61,6 +70,22 @@ class FilesParser(object):
                         nfile = "%s/%s" % (root_dir, f)
                         self.database.insert('files', {'dir_id':self.dir_id, 'path':nfile, 'status':False})
 
+    def parse_remote_sftp_files(self,rpath=None):
+        if not rpath:
+            rpath = self.source.get('path')
+        if self.dir_id is None:
+            self.dir_id = self.database.insert('dirs', {'path':str(rpath), 'status':False})
+        for f in self.sftp.listdir(rpath):
+            try:
+                rf = rpath+'/'+f
+                if S_ISDIR(self.sftp.stat(rf).st_mode):
+                    self.dir_id = self.database.insert('dirs', {'path':str(rf), 'status':False})
+                    self.parse_remote_sftp_files(rf)
+                else:
+                    self.database.insert('files', {'dir_id':self.dir_id, 'path':str(rf), 'status':False})
+            except IOError:
+                pass
+
     def print_path_not_found_error(self):
         """Print the path not found error and stops the program execution"""
         print("The source path is not a valid path")
@@ -89,3 +114,12 @@ class FilesParser(object):
             exit(0)
         else:
             return True
+
+    def init_sftp_connection(self):
+        self.transport = Transport((self.source.get('address'),22))
+        self.transport.connect(username=self.source.get('user'),password=self.source.get('password'))
+        self.sftp = SFTPClient.from_transport(self.transport)
+
+    def close_sftp_connection(self):
+        self.sftp.close()
+        self.transport.close()

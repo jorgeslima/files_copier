@@ -21,7 +21,7 @@ class ConfigHandler:
         """Create the config file"""
         config = configparser.ConfigParser(allow_no_value=True)
         config.add_section("SOURCE")
-        config.set("SOURCE", ";Type of the server (local or ftp)", None)
+        config.set("SOURCE", ";Type of the server (local, ftp(port 21), sftp(port 22))", None)
         config.set("SOURCE", 'Type', '')
         config.set("SOURCE", ";Address from where we should copy the files: localhost or IP address", None)
         config.set("SOURCE", 'address', '')
@@ -32,7 +32,7 @@ class ConfigHandler:
         config.set("SOURCE", ';Password of the source server. Will be used if the source server is a remote server', None)
         config.set("SOURCE", 'Password', '')
         config.add_section("TARGET")
-        config.set("TARGET", ";Type of the server (local or ftp)", None)
+        config.set("TARGET", ";Type of the server (local, ftp(port 21), sftp(port 22))", None)
         config.set("TARGET", 'type', '')
         config.set("TARGET", ";Address from where we should copy the files: localhost or IP address", None)
         config.set("TARGET", 'address', '')
